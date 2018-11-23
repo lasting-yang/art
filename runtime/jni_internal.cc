@@ -1339,7 +1339,7 @@ class JNI {
     NotifyGetField(f, obj);
     ObjPtr<mirror::Object> o = soa.Decode<mirror::Object>(obj);
     jobject result = soa.AddLocalReference<jobject>(f->GetObject(o));
-    if (o->GetClass()->GetName() != nullptr) {
+    if (o->GetClass() != nullptr && o->GetClass()->GetName() != nullptr) {
       LOG(WARNING) << "-JNI GetObjectField jobject:" << o->GetClass()->GetName()->ToModifiedUtf8() << " jfieldID:" << f->GetName() << " jobject:" << result;
     } else {
       LOG(WARNING) << "-JNI GetObjectField jfieldID:" << f->GetName() << " jobject:" << result;
@@ -1366,7 +1366,12 @@ class JNI {
     NotifySetObjectField(f, java_object, java_value);
     ObjPtr<mirror::Object> o = soa.Decode<mirror::Object>(java_object);
     ObjPtr<mirror::Object> v = soa.Decode<mirror::Object>(java_value);
-    LOG(WARNING) << "-JNI SetObjectField jfieldID:" << f->GetName();
+    if (o != nullptr && o->GetClass() != nullptr && o->GetClass()->GetName() != nullptr) {
+      LOG(WARNING) << "-JNI SetObjectField jobject:" << o->GetClass()->GetName()->ToModifiedUtf8() << "jfieldID:" << f->GetName();
+    } else {
+      LOG(WARNING) << "-JNI SetObjectField jfieldID:" << f->GetName();
+    }
+    
     f->SetObject<false>(o, v);
   }
 
@@ -1387,6 +1392,8 @@ class JNI {
   ArtField* f = jni::DecodeArtField(fid); \
   NotifyGetField(f, instance); \
   ObjPtr<mirror::Object> o = soa.Decode<mirror::Object>(instance); \
+  if (o != nullptr && o->GetClass() != nullptr && o->GetClass()->GetName() != nullptr) { LOG(WARNING) << "-JNI GET_PRIMITIVE_FIELD jobject:" << o->GetClass()->GetName()->ToModifiedUtf8() << " jfieldID:" << f->GetName(); } \
+  else { LOG(WARNING) << "-JNI GET_PRIMITIVE_FIELD jfieldID:" << f->GetName();} \
   return f->Get ##fn (o)
 
 #define GET_STATIC_PRIMITIVE_FIELD(fn) \
@@ -1394,6 +1401,7 @@ class JNI {
   ScopedObjectAccess soa(env); \
   ArtField* f = jni::DecodeArtField(fid); \
   NotifyGetField(f, nullptr); \
+  LOG(WARNING) << "-JNI GET_STATIC_PRIMITIVE_FIELD jfieldID:" << f->GetName(); \
   return f->Get ##fn (f->GetDeclaringClass())
 
 #define SET_PRIMITIVE_FIELD(fn, instance, value) \
@@ -1403,6 +1411,8 @@ class JNI {
   ArtField* f = jni::DecodeArtField(fid); \
   NotifySetPrimitiveField(f, instance, JValue::FromPrimitive<decltype(value)>(value)); \
   ObjPtr<mirror::Object> o = soa.Decode<mirror::Object>(instance); \
+  if (o != nullptr && o->GetClass() != nullptr && o->GetClass()->GetName() != nullptr) { LOG(WARNING) << "-JNI SET_PRIMITIVE_FIELD jobject:" << o->GetClass()->GetName()->ToModifiedUtf8() << " jfieldID:" << f->GetName(); } \
+  else { LOG(WARNING) << "-JNI SET_PRIMITIVE_FIELD jfieldID:" << f->GetName();} \
   f->Set ##fn <false>(o, value)
 
 #define SET_STATIC_PRIMITIVE_FIELD(fn, value) \
@@ -1410,6 +1420,7 @@ class JNI {
   ScopedObjectAccess soa(env); \
   ArtField* f = jni::DecodeArtField(fid); \
   NotifySetPrimitiveField(f, nullptr, JValue::FromPrimitive<decltype(value)>(value)); \
+  LOG(WARNING) << "-JNI SET_STATIC_PRIMITIVE_FIELD jfieldID:" << f->GetName(); \
   f->Set ##fn <false>(f->GetDeclaringClass(), value)
 
   static jboolean GetBooleanField(JNIEnv* env, jobject obj, jfieldID fid) {
