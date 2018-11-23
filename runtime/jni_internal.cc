@@ -1784,6 +1784,9 @@ class JNI {
     }
     ScopedObjectAccess soa(env);
     mirror::String* result = mirror::String::AllocFromUtf16(soa.Self(), char_count, chars);
+    if (result != nullptr) {
+      LOG(WARNING) << "-JNI NewString " << result->ToModifiedUtf8();
+    }
     return soa.AddLocalReference<jstring>(result);
   }
 
@@ -1791,6 +1794,7 @@ class JNI {
     if (utf == nullptr) {
       return nullptr;
     }
+    LOG(WARNING) << "-JNI NewStringUTF " << utf;
     ScopedObjectAccess soa(env);
     mirror::String* result = mirror::String::AllocFromModifiedUtf8(soa.Self(), utf);
     return soa.AddLocalReference<jstring>(result);
@@ -1853,6 +1857,9 @@ class JNI {
     CHECK_NON_NULL_ARGUMENT(java_string);
     ScopedObjectAccess soa(env);
     ObjPtr<mirror::String> s = soa.Decode<mirror::String>(java_string);
+    if (s != nullptr) {
+      LOG(WARNING) << "-JNI GetStringChars " << s->ToModifiedUtf8();
+    }
     gc::Heap* heap = Runtime::Current()->GetHeap();
     if (heap->IsMovableObject(s) || s->IsCompressed()) {
       jchar* chars = new jchar[s->GetLength()];
@@ -1958,6 +1965,9 @@ class JNI {
       ConvertUtf16ToModifiedUtf8(bytes, byte_count, chars, s->GetLength());
     }
     bytes[byte_count] = '\0';
+    if (bytes != nullptr) {
+      LOG(WARNING) << "-JNI GetStringUTFChars " << bytes;
+    }
     return bytes;
   }
 
