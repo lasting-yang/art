@@ -472,6 +472,11 @@ JValue InvokeWithVarArgs(const ScopedObjectAccessAlreadyRunnable& soa, jobject o
     method = WellKnownClasses::StringInitToStringFactory(method);
   }
   ObjPtr<mirror::Object> receiver = method->IsStatic() ? nullptr : soa.Decode<mirror::Object>(obj);
+  if (receiver != nullptr && receiver->GetClass() != nullptr && receiver->GetClass()->GetName() != nullptr) {
+    LOG(WARNING) << "-JNI InvokeWithVarArgs jobject:" << receiver->GetClass()->GetName()->ToModifiedUtf8() << " method name:" << method->GetName();
+  } else {
+    LOG(WARNING) << "-JNI InvokeWithVarArgs method name:" << method->GetName();
+  }
   uint32_t shorty_len = 0;
   const char* shorty =
       method->GetInterfaceMethodIfProxy(kRuntimePointerSize)->GetShorty(&shorty_len);
@@ -503,6 +508,12 @@ JValue InvokeWithJValues(const ScopedObjectAccessAlreadyRunnable& soa, jobject o
     method = WellKnownClasses::StringInitToStringFactory(method);
   }
   ObjPtr<mirror::Object> receiver = method->IsStatic() ? nullptr : soa.Decode<mirror::Object>(obj);
+  if (receiver != nullptr && receiver->GetClass() != nullptr && receiver->GetClass()->GetName() != nullptr) {
+    LOG(WARNING) << "-JNI InvokeWithJValues jobject:" << receiver->GetClass()->GetName()->ToModifiedUtf8() << " method name:" << method->GetName();
+  } else {
+    LOG(WARNING) << "-JNI InvokeWithJValues method name:" << method->GetName();
+  }
+  
   uint32_t shorty_len = 0;
   const char* shorty =
       method->GetInterfaceMethodIfProxy(kRuntimePointerSize)->GetShorty(&shorty_len);
@@ -529,6 +540,11 @@ JValue InvokeVirtualOrInterfaceWithJValues(const ScopedObjectAccessAlreadyRunnab
 
   ObjPtr<mirror::Object> receiver = soa.Decode<mirror::Object>(obj);
   ArtMethod* method = FindVirtualMethod(receiver, jni::DecodeArtMethod(mid));
+  if (receiver != nullptr && receiver->GetClass() != nullptr && receiver->GetClass()->GetName() != nullptr) {
+    LOG(WARNING) << "-JNI InvokeVirtualOrInterfaceWithJValues jobject:" << receiver->GetClass()->GetName()->ToModifiedUtf8() << " method name:" << method->GetName();
+  } else {
+    LOG(WARNING) << "-JNI InvokeVirtualOrInterfaceWithJValues method name:" << method->GetName();
+  }
   bool is_string_init = method->GetDeclaringClass()->IsStringClass() && method->IsConstructor();
   if (is_string_init) {
     // Replace calls to String.<init> with equivalent StringFactory call.
@@ -561,6 +577,11 @@ JValue InvokeVirtualOrInterfaceWithVarArgs(const ScopedObjectAccessAlreadyRunnab
 
   ObjPtr<mirror::Object> receiver = soa.Decode<mirror::Object>(obj);
   ArtMethod* method = FindVirtualMethod(receiver, jni::DecodeArtMethod(mid));
+  if (receiver->GetClass() != nullptr && receiver->GetClass()->GetName() != nullptr) {
+    LOG(WARNING) << "-JNI InvokeVirtualOrInterfaceWithVarArgs jobject:" << receiver->GetClass()->GetName()->ToModifiedUtf8() << " method name:" << method->GetName();
+  } else {
+    LOG(WARNING) << "-JNI InvokeVirtualOrInterfaceWithVarArgs method name:" << method->GetName();
+  }
   bool is_string_init = method->GetDeclaringClass()->IsStringClass() && method->IsConstructor();
   if (is_string_init) {
     // Replace calls to String.<init> with equivalent StringFactory call.

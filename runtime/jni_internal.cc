@@ -231,6 +231,12 @@ static jmethodID FindMethodID(ScopedObjectAccess& soa, jclass jni_class,
   if (c == nullptr) {
     return nullptr;
   }
+  if (c->GetName() != nullptr) {
+    LOG(WARNING) << "-JNI FindMethodID jclass:" << c->GetName()->ToModifiedUtf8() << " name:" << name << " sig:" << sig;
+  } else {
+    LOG(WARNING) << "-JNI FindMethodID name:" << name << " sig:" << sig;
+  }
+  
   ArtMethod* method = nullptr;
   auto pointer_size = Runtime::Current()->GetClassLinker()->GetImagePointerSize();
   if (c->IsInterface()) {
@@ -283,6 +289,11 @@ static jfieldID FindFieldID(const ScopedObjectAccess& soa, jclass jni_class, con
       hs.NewHandle(EnsureInitialized(soa.Self(), soa.Decode<mirror::Class>(jni_class))));
   if (c == nullptr) {
     return nullptr;
+  }
+  if (c->GetName() != nullptr) {
+    LOG(WARNING) << "-JNI FindFieldID jclass:" << c->GetName()->ToModifiedUtf8() << " name:" << name << " sig:" << sig << " is_static:" << is_static;
+  } else {
+    LOG(WARNING) << "-JNI FindFieldID name:" << name << " sig:" << sig << " is_static:" << is_static;
   }
   ArtField* field = nullptr;
   mirror::Class* field_type;
@@ -437,6 +448,7 @@ class JNI {
     CHECK_NON_NULL_ARGUMENT(name);
     Runtime* runtime = Runtime::Current();
     ClassLinker* class_linker = runtime->GetClassLinker();
+
     std::string descriptor(NormalizeJniClassDescriptor(name));
     ScopedObjectAccess soa(env);
     mirror::Class* c = nullptr;
@@ -447,7 +459,9 @@ class JNI {
     } else {
       c = class_linker->FindSystemClass(soa.Self(), descriptor.c_str());
     }
-    return soa.AddLocalReference<jclass>(c);
+    jclass result = soa.AddLocalReference<jclass>(c);
+    LOG(WARNING) << "-JNI FindClass name:" << name << " jclass:" << result;
+    return result;
   }
 
   static jmethodID FromReflectedMethod(JNIEnv* env, jobject jlr_method) {
@@ -1324,7 +1338,14 @@ class JNI {
     ArtField* f = jni::DecodeArtField(fid);
     NotifyGetField(f, obj);
     ObjPtr<mirror::Object> o = soa.Decode<mirror::Object>(obj);
-    return soa.AddLocalReference<jobject>(f->GetObject(o));
+    jobject result = soa.AddLocalReference<jobject>(f->GetObject(o));
+    if (o->GetClass()->GetName() != nullptr) {
+      LOG(WARNING) << "-JNI GetObjectField jobject:" << o->GetClass()->GetName()->ToModifiedUtf8() << " jfieldID:" << f->GetName() << " jobject:" << result;
+    } else {
+      LOG(WARNING) << "-JNI GetObjectField jfieldID:" << f->GetName() << " jobject:" << result;
+    }
+    
+    return result;
   }
 
   static jobject GetStaticObjectField(JNIEnv* env, jclass, jfieldID fid) {
@@ -1332,7 +1353,9 @@ class JNI {
     ScopedObjectAccess soa(env);
     ArtField* f = jni::DecodeArtField(fid);
     NotifyGetField(f, nullptr);
-    return soa.AddLocalReference<jobject>(f->GetObject(f->GetDeclaringClass()));
+    jobject result = soa.AddLocalReference<jobject>(f->GetObject(f->GetDeclaringClass()));
+    LOG(WARNING) << "-JNI GetStaticObjectField jfieldID:" << f->GetName() << " jobject:" << result;
+    return result;
   }
 
   static void SetObjectField(JNIEnv* env, jobject java_object, jfieldID fid, jobject java_value) {
@@ -1343,6 +1366,7 @@ class JNI {
     NotifySetObjectField(f, java_object, java_value);
     ObjPtr<mirror::Object> o = soa.Decode<mirror::Object>(java_object);
     ObjPtr<mirror::Object> v = soa.Decode<mirror::Object>(java_value);
+    LOG(WARNING) << "-JNI SetObjectField jfieldID:" << f->GetName();
     f->SetObject<false>(o, v);
   }
 
@@ -1353,6 +1377,7 @@ class JNI {
     NotifySetObjectField(f, nullptr, java_value);
     ObjPtr<mirror::Object> v = soa.Decode<mirror::Object>(java_value);
     f->SetObject<false>(f->GetDeclaringClass(), v);
+    LOG(WARNING) << "-JNI SetStaticObjectField jfieldID:" << f->GetName();
   }
 
 #define GET_PRIMITIVE_FIELD(fn, instance) \
@@ -2261,6 +2286,7 @@ class JNI {
       const char* name = methods[i].name;
       const char* sig = methods[i].signature;
       const void* fnPtr = methods[i].fnPtr;
+      LOG(WARNING) << "JNI RegisterNativeMethods name:" << name << " sig:" << sig << " fnPtr:" << fnPtr;
       if (UNLIKELY(name == nullptr)) {
         ReportInvalidJNINativeMethod(soa, c.Get(), "method name", i);
         return JNI_ERR;
